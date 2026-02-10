@@ -154,16 +154,6 @@ with st.sidebar:
             mime="application/json",
         )
 
-    # Load campaign state
-    loaded_state = st.file_uploader("Import Campaign State", type=["json"], key="state_loader")
-    if loaded_state:
-        try:
-            imported = json.loads(loaded_state.read())
-            st.session_state["workflow_results"] = imported
-            st.success("Campaign state loaded!")
-            st.rerun()
-        except json.JSONDecodeError:
-            st.error("Invalid JSON file")
 
 
 # ---------------------------------------------------------------------------
