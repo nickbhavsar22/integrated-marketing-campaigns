@@ -2,6 +2,7 @@ import json
 import io
 import re
 import os
+import sys
 import zipfile
 import streamlit as st
 from datetime import datetime
@@ -45,6 +46,7 @@ def safe_markdown(content, max_length=100000):
 # ---------------------------------------------------------------------------
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, root_dir)
 
 # Secret Handling for Cloud vs Local
 try:
@@ -62,12 +64,46 @@ env_path = os.path.join(root_dir, ".env")
 if os.path.exists(env_path):
     load_dotenv(dotenv_path=env_path, override=True)
 
-
-# ---------------------------------------------------------------------------
-# Page config & title
-# ---------------------------------------------------------------------------
-
 st.set_page_config(page_title="Integrated Marketing Campaigns", layout="wide", page_icon="IMC")
+
+# ---------------------------------------------------------------------------
+# Password Protection
+# ---------------------------------------------------------------------------
+
+def check_password():
+    """Gate access behind a simple password."""
+    expected = None
+    try:
+        expected = st.secrets.get("app_password")
+    except FileNotFoundError:
+        pass
+    if not expected:
+        expected = os.environ.get("APP_PASSWORD")
+    if not expected:
+        st.error("No app password configured. Set 'app_password' in Streamlit secrets or APP_PASSWORD in .env.")
+        st.stop()
+        return False
+
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.title("Integrated Marketing Campaigns AI")
+    password = st.text_input("Enter password", type="password", key="login_password")
+    if st.button("Login", key="login_btn"):
+        if password == expected:
+            st.session_state["authenticated"] = True
+            st.rerun()
+        else:
+            st.error("Incorrect password.")
+    return False
+
+
+if not check_password():
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Page title
+# ---------------------------------------------------------------------------
 
 results = st.session_state.get("workflow_results", {})
 extracted_name = results.get("company_name")
@@ -92,28 +128,10 @@ with st.sidebar:
         type=["pdf", "docx", "doc", "txt", "md"],
     )
 
-    st.divider()
-    st.header("Brand Settings")
-    brand_voice = st.text_input(
-        "Brand Voice",
-        placeholder="e.g., Authoritative, technical, precise",
-        help="Describe how the brand should sound",
-    )
-    brand_tone = st.selectbox(
-        "Brand Tone",
-        ["Professional", "Conversational", "Technical", "Bold", "Empathetic"],
-        help="Select the overall tone for content",
-    )
-    messaging_pillars_text = st.text_area(
-        "Key Messaging Pillars",
-        placeholder="Speed\nSecurity\nScale",
-        help="One pillar per line",
-    )
-    messaging_pillars = (
-        [p.strip() for p in messaging_pillars_text.split("\n") if p.strip()]
-        if messaging_pillars_text
-        else []
-    )
+    # Brand defaults (not user-configurable)
+    brand_voice = ""
+    brand_tone = "Professional"
+    messaging_pillars = []
 
     with st.expander("Advanced Settings"):
         refinement_threshold = st.slider(
