@@ -1,0 +1,31 @@
+venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+data/
+
+# Application outputs
+outputs/
+.tmp/
+
+# Credentials
+credentials.json
+token.json
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+nul
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Claude
+.claude/
