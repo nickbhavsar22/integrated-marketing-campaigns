@@ -13,7 +13,7 @@ class MarketSegmentAgent:
             model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
             temperature=0.2,
             google_api_key=api_key,
-            max_retries=10
+            max_retries=2
         )
 
     def analyze(self, state: AgentState) -> dict:

@@ -14,7 +14,7 @@ class ContentCreatorAgent:
             model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
             temperature=0.4,
             google_api_key=api_key,
-            max_retries=10,
+            max_retries=2,
         )
 
     def generate_asset(self, asset_request: dict, campaign_brief: dict, strategy_framework: str = "", company_name: str = "Company", refinement_instructions: str = "", brand_voice: str = "", brand_tone: str = "") -> dict:

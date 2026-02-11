@@ -11,7 +11,7 @@ class CompetitorAgent:
             model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
             temperature=0.1,
             google_api_key=api_key,
-            max_retries=10
+            max_retries=2
         )
 
     def _fetch_tavily_intel(self, company_name: str) -> str:
