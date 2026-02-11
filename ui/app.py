@@ -179,9 +179,12 @@ with tab1:
     if st.button("Start Research Phase", key="start_research"):
         if not company_url:
             st.error("Please provide a Company URL.")
+        elif not os.environ.get("GOOGLE_API_KEY"):
+            st.error("GOOGLE_API_KEY is not configured. Add it to Streamlit secrets or .env file.")
         else:
             with st.status("Running Research Phase...", expanded=True) as status:
                 try:
+                    st.write("Loading AI agents (first run may take a moment)...")
                     from core.graph import (
                         input_node,
                         research_node,
