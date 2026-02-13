@@ -1,18 +1,12 @@
 import os
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from core.state import AgentState
+from core.llm import get_llm
 
 class CompetitorAgent:
     def __init__(self):
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.llm = ChatGoogleGenerativeAI(
-            model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
-            temperature=0.1,
-            google_api_key=api_key,
-            max_retries=2
-        )
+        self.temperature = 0.1
 
     def _fetch_tavily_intel(self, company_name: str) -> str:
         """Fetch real-time competitor intelligence via Tavily search."""
@@ -44,6 +38,7 @@ class CompetitorAgent:
         """
         research = state.get("deep_research", "")
         company_name = state.get("company_name", "")
+        llm = get_llm(temperature=self.temperature)
 
         tavily_intel = self._fetch_tavily_intel(company_name)
 
@@ -65,7 +60,7 @@ class CompetitorAgent:
             """
         )
 
-        chain = prompt | self.llm | StrOutputParser()
+        chain = prompt | llm | StrOutputParser()
 
         try:
             result = chain.invoke({"research": research, "tavily_intel": tavily_intel})

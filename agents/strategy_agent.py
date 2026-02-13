@@ -1,24 +1,17 @@
-import os
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from core.state import AgentState
+from core.llm import get_llm
 
 class StrategyAgent:
     def __init__(self):
-        # Using Gemini 1.5 Pro
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.llm = ChatGoogleGenerativeAI(
-            model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
-            temperature=0.3,
-            google_api_key=api_key,
-            max_retries=2
-        )
+        self.temperature = 0.3
 
     def develop_strategy(self, state: AgentState) -> dict:
         """
         Drafts key positioning and messaging frameworks.
         """
+        llm = get_llm(temperature=self.temperature)
         research = state.get("deep_research", "")
         segments = state.get("segments", [])
         competitors = state.get("competitor_analysis", "")
@@ -61,7 +54,7 @@ class StrategyAgent:
             """
         )
 
-        chain = prompt | self.llm | StrOutputParser()
+        chain = prompt | llm | StrOutputParser()
         try:
             result = chain.invoke({
                 "company_name": company_name,

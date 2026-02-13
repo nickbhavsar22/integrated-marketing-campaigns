@@ -1,48 +1,41 @@
-import os
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from core.state import AgentState
+from core.llm import get_llm
 
 class CampaignArchitectAgent:
     def __init__(self):
-        # Using Gemini 1.5 Pro
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.llm = ChatGoogleGenerativeAI(
-            model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
-            temperature=0.4,
-            google_api_key=api_key,
-            max_retries=2
-        )
+        self.temperature = 0.4
 
     def create_brief(self, state: AgentState) -> dict:
         """
         Creates a structured campaign brief.
         """
+        llm = get_llm(temperature=self.temperature)
         strategy = state.get("strategy_framework", "")
         personas = state.get("personas", [])
         segments = state.get("segments", [])
         company_name = state.get("company_name", "the Client")
-        
+
         prompt = ChatPromptTemplate.from_template(
             """
             You are a Campaign Manager for {company_name}.
             Create a Campaign Brief based on the strategy.
-            
+
             **Strategy:**
             {strategy}
-            
+
             **Available Segments:**
             {segments}
-            
+
             **Personas:**
             {personas}
-            
+
             **Task:**
             1. Analyze the research and segments to select **EXACTLY ONE** Primary Target Segment.
             2. High-value selection: Choose the segment with the highest growth potential OR the clearest pain point alignment.
             3. Build the campaign strategy around this specific segment.
-            
+
             **Output:**
             Create a JSON object representing the Brief. You MUST include 'primary_target_segment' and 'segment_rationale'.
             {{
@@ -59,8 +52,8 @@ class CampaignArchitectAgent:
             }}
             """
         )
-        
-        chain = prompt | self.llm | JsonOutputParser()
+
+        chain = prompt | llm | JsonOutputParser()
         try:
             result = chain.invoke({
                 "company_name": company_name,

@@ -1,27 +1,21 @@
-import os
 import time
 import concurrent.futures
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from core.state import AgentState
+from core.llm import get_llm
 
 
 class ContentCreatorAgent:
     def __init__(self):
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.llm = ChatGoogleGenerativeAI(
-            model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
-            temperature=0.4,
-            google_api_key=api_key,
-            max_retries=2,
-        )
+        self.temperature = 0.4
 
     def generate_asset(self, asset_request: dict, campaign_brief: dict, strategy_framework: str = "", company_name: str = "Company", refinement_instructions: str = "", brand_voice: str = "", brand_tone: str = "") -> dict:
         """
         Generates a single content asset based on the request (row from manifest).
         """
         time.sleep(5)
+        llm = get_llm(temperature=self.temperature)
 
         asset_type = asset_request.get("asset_type", asset_request.get("recommended_asset_type", "Blog Post"))
         jtbd = asset_request.get("jtbd", "")
@@ -77,7 +71,7 @@ class ContentCreatorAgent:
             """
         )
 
-        chain = prompt | self.llm | StrOutputParser()
+        chain = prompt | llm | StrOutputParser()
         content = chain.invoke({
             "asset_type": asset_type,
             "strategy": strategy_framework,

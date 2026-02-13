@@ -3,6 +3,7 @@ import io
 import re
 import os
 import sys
+import time
 import zipfile
 import streamlit as st
 from datetime import datetime
@@ -67,6 +68,181 @@ if os.path.exists(env_path):
 st.set_page_config(page_title="Integrated Marketing Campaigns", layout="wide", page_icon="IMC")
 
 # ---------------------------------------------------------------------------
+# Brand CSS
+# ---------------------------------------------------------------------------
+
+BRAND_CSS = """
+<style>
+    /* ---- Typography ---- */
+    html, body, [class*="css"] {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 400;
+        line-height: 1.5;
+    }
+    h1, h2, h3, h4, h5, h6,
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #DCDAD5;
+    }
+
+    /* ---- Accent gradient bar ---- */
+    .brand-gradient-bar {
+        height: 3px;
+        background: linear-gradient(90deg, #FE7B02, #FE3F21, #F858BC, #575ECF);
+        border-radius: 2px;
+        margin: 0.5rem 0 1.5rem 0;
+    }
+
+    /* ---- Buttons ---- */
+    .stButton > button {
+        border-radius: 6px !important;
+        padding: 8px 16px !important;
+        font-weight: 500 !important;
+        box-shadow: 0 8px 8px -4px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.32, 1) !important;
+        border: 1px solid #333 !important;
+    }
+    .stButton > button:hover {
+        color: #DCDAD5 !important;
+        border-color: #575ECF !important;
+        box-shadow: 0 8px 16px -4px rgba(87, 94, 207, 0.2) !important;
+    }
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, #575ECF, #6B71D9) !important;
+        border: none !important;
+        color: #fff !important;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: linear-gradient(135deg, #6B71D9, #7F84E3) !important;
+        color: #fff !important;
+    }
+
+    /* ---- Download buttons ---- */
+    .stDownloadButton > button {
+        border-radius: 6px !important;
+        padding: 8px 16px !important;
+        box-shadow: 0 8px 8px -4px rgba(0, 0, 0, 0.08) !important;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.32, 1) !important;
+    }
+
+    /* ---- Inputs ---- */
+    .stTextInput input, .stTextArea textarea, .stSelectbox > div > div {
+        border-radius: 6px !important;
+        border-color: #333 !important;
+        transition: border-color 0.2s cubic-bezier(0.16, 1, 0.32, 1) !important;
+    }
+    .stTextInput input:focus, .stTextArea textarea:focus {
+        border-color: #575ECF !important;
+        box-shadow: 0 0 0 1px #575ECF !important;
+    }
+
+    /* ---- Tabs ---- */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        border-bottom: 2px solid #333;
+    }
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 6px 6px 0 0;
+        padding: 10px 20px;
+        font-weight: 500;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.32, 1);
+    }
+    .stTabs [aria-selected="true"] {
+        border-bottom: 2px solid #575ECF !important;
+        color: #DCDAD5 !important;
+    }
+
+    /* ---- Containers & Expanders ---- */
+    .stExpander {
+        border-radius: 6px !important;
+        border-color: #333 !important;
+    }
+    [data-testid="stExpander"] details {
+        border-radius: 6px !important;
+    }
+    div[data-testid="stVerticalBlock"] > div[style*="border"] {
+        border-radius: 6px !important;
+        border-color: #333 !important;
+    }
+
+    /* ---- Sidebar ---- */
+    [data-testid="stSidebar"] {
+        background-color: #161616 !important;
+        border-right: 1px solid #2a2a2a;
+    }
+    [data-testid="stSidebar"] .stMarkdown h2,
+    [data-testid="stSidebar"] .stMarkdown h3 {
+        color: #DCDAD5;
+    }
+
+    /* ---- Metrics ---- */
+    [data-testid="stMetric"] {
+        background: #242424;
+        border-radius: 6px;
+        padding: 12px;
+        border: 1px solid #333;
+    }
+    [data-testid="stMetricValue"] {
+        color: #575ECF !important;
+    }
+
+    /* ---- Status widget ---- */
+    .stStatus {
+        border-radius: 6px !important;
+    }
+
+    /* ---- Slider ---- */
+    .stSlider > div > div > div {
+        color: #575ECF !important;
+    }
+
+    /* ---- Links ---- */
+    a { color: #575ECF; }
+    a:hover { color: #DCDAD5; }
+
+    /* ---- Dividers ---- */
+    hr {
+        border-color: #333 !important;
+    }
+
+    /* ---- Scrollbar ---- */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: #1B1B1B; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #575ECF; }
+
+    /* ---- Provider badge ---- */
+    .provider-badge {
+        display: inline-block;
+        background: #242424;
+        border: 1px solid #333;
+        border-radius: 6px;
+        padding: 4px 10px;
+        font-size: 0.8em;
+        color: #C5C1B9;
+        margin-top: 4px;
+    }
+</style>
+"""
+
+st.markdown(BRAND_CSS, unsafe_allow_html=True)
+
+# ---------------------------------------------------------------------------
+# Logo helper
+# ---------------------------------------------------------------------------
+
+LOGO_PATH = os.path.join(root_dir, "assets", "logo.png")
+
+
+def show_logo(width=280):
+    """Display brand logo if available."""
+    if os.path.exists(LOGO_PATH):
+        st.image(LOGO_PATH, width=width)
+
+
+# ---------------------------------------------------------------------------
 # Password Protection
 # ---------------------------------------------------------------------------
 
@@ -87,9 +263,11 @@ def check_password():
     if st.session_state.get("authenticated"):
         return True
 
+    show_logo(width=320)
     st.title("Integrated Marketing Campaigns AI")
+    st.markdown('<div class="brand-gradient-bar"></div>', unsafe_allow_html=True)
     password = st.text_input("Enter password", type="password", key="login_password")
-    if st.button("Login", key="login_btn"):
+    if st.button("Login", key="login_btn", type="primary"):
         if password == expected:
             st.session_state["authenticated"] = True
             st.rerun()
@@ -108,10 +286,12 @@ if not check_password():
 results = st.session_state.get("workflow_results", {})
 extracted_name = results.get("company_name")
 
+show_logo(width=240)
 if extracted_name:
     st.title(f"Marketing Strategy: {extracted_name}")
 else:
     st.title("Integrated Marketing Campaigns AI")
+st.markdown('<div class="brand-gradient-bar"></div>', unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -119,6 +299,7 @@ else:
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
+    show_logo(width=200)
     st.header("Project Inputs")
     company_url = st.text_input("Company URL", placeholder="https://example.com")
 
@@ -134,6 +315,50 @@ with st.sidebar:
     messaging_pillars = []
 
     with st.expander("Advanced Settings"):
+        # --- AI Provider Selection ---
+        provider_options = []
+        provider_map = {}
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            provider_options.append("Anthropic")
+            provider_map["Anthropic"] = "anthropic"
+        if os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"):
+            provider_options.append("Google Gemini")
+            provider_map["Google Gemini"] = "google"
+        if os.environ.get("OPENAI_API_KEY"):
+            provider_options.append("OpenAI")
+            provider_map["OpenAI"] = "openai"
+        if not provider_options:
+            provider_options = ["Anthropic", "Google Gemini", "OpenAI"]
+            provider_map = {"Anthropic": "anthropic", "Google Gemini": "google", "OpenAI": "openai"}
+
+        # Determine default index from env
+        current_provider_env = os.environ.get("LLM_PROVIDER", "anthropic").lower()
+        default_label = next(
+            (k for k, v in provider_map.items() if v == current_provider_env),
+            provider_options[0],
+        )
+        default_idx = provider_options.index(default_label) if default_label in provider_options else 0
+
+        selected_provider = st.selectbox(
+            "AI Provider",
+            options=provider_options,
+            index=default_idx,
+            key="llm_provider",
+            help="Select which AI model provider to use for all agents",
+        )
+        os.environ["LLM_PROVIDER"] = provider_map.get(selected_provider, "anthropic")
+
+        # Show active model name
+        model_names = {
+            "anthropic": os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929"),
+            "google": os.environ.get("GOOGLE_MODEL", "gemini-2.5-flash"),
+            "openai": os.environ.get("OPENAI_MODEL", "gpt-4o"),
+        }
+        active_model = model_names.get(os.environ["LLM_PROVIDER"], "unknown")
+        st.markdown(f'<span class="provider-badge">Model: {active_model}</span>', unsafe_allow_html=True)
+
+        st.markdown("---")
+
         refinement_threshold = st.slider(
             "Quality Threshold", 50, 100, 80, help="Minimum reviewer score before accepting"
         )
@@ -179,8 +404,6 @@ with tab1:
     if st.button("Start Research Phase", key="start_research"):
         if not company_url:
             st.error("Please provide a Company URL.")
-        elif not os.environ.get("GOOGLE_API_KEY"):
-            st.error("GOOGLE_API_KEY is not configured. Add it to Streamlit secrets or .env file.")
         else:
             with st.status("Running Research Phase...", expanded=True) as status:
                 try:
@@ -231,22 +454,27 @@ with tab1:
                     st.write("Analyzing company identity and value proposition...")
                     result = research_node(current_state)
                     current_state.update(result)
+                    time.sleep(1)
 
                     st.write("Identifying market segments and personas...")
                     result = segment_node(current_state)
                     current_state.update(result)
+                    time.sleep(1)
 
                     st.write("Analyzing competitive landscape...")
                     result = competitor_node(current_state)
                     current_state.update(result)
+                    time.sleep(1)
 
                     st.write("Developing positioning and messaging strategy...")
                     result = strategy_node(current_state)
                     current_state.update(result)
+                    time.sleep(1)
 
                     st.write("Creating campaign brief...")
                     result = campaign_node(current_state)
                     current_state.update(result)
+                    time.sleep(1)
 
                     st.write("Mapping Jobs-to-be-Done and content plan...")
                     result = jtbd_node(current_state)

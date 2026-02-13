@@ -1,24 +1,18 @@
-import os
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from core.state import AgentState
+from core.llm import get_llm
 
 
 class PromotionalAgent:
     def __init__(self):
-        api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-        self.llm = ChatGoogleGenerativeAI(
-            model=os.getenv("GOOGLE_MODEL", "gemini-2.0-flash"),
-            temperature=0.5,
-            google_api_key=api_key,
-            max_retries=2
-        )
+        self.temperature = 0.5
 
     def generate_promo(self, asset: dict, brand_voice: str = "", brand_tone: str = "") -> dict:
         """
         Creates promo materials for a generated asset.
         """
+        llm = get_llm(temperature=self.temperature)
         content_preview = asset.get("content", "")[:1000]
 
         brand_block = ""
@@ -52,7 +46,7 @@ class PromotionalAgent:
             """
         )
 
-        chain = prompt | self.llm | StrOutputParser()
+        chain = prompt | llm | StrOutputParser()
         promo_content = chain.invoke({"content": content_preview, "brand_block": brand_block})
 
         return {
