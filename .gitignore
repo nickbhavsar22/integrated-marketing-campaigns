@@ -13,6 +13,7 @@ outputs/
 credentials.json
 token.json
 .env.*
+!.env.example
 
 # IDE
 .vscode/

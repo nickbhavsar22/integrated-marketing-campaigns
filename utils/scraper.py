@@ -1,9 +1,13 @@
 import socket
 import ipaddress
+import time
 import requests
 from bs4 import BeautifulSoup
 import html2text
 from urllib.parse import urlparse, urljoin
+
+# Rate limiting: minimum seconds between requests to the same domain
+_REQUEST_DELAY = 1.0
 
 
 def validate_url(url: str) -> None:
@@ -44,6 +48,7 @@ class WebScraper:
         self.converter.ignore_links = False
         self.converter.ignore_images = True
         self.converter.ignore_tables = False
+        self._last_request_time = 0.0
 
     def scrape(self, url: str, depth: int = 1) -> str:
         """
@@ -77,7 +82,11 @@ class WebScraper:
             return f"Error during scrape: {str(e)}"
 
     def _fetch_raw_html(self, url: str) -> str:
-        """Fetches the raw HTML content of a URL."""
+        """Fetches the raw HTML content of a URL with rate limiting."""
+        elapsed = time.time() - self._last_request_time
+        if elapsed < _REQUEST_DELAY:
+            time.sleep(_REQUEST_DELAY - elapsed)
+        self._last_request_time = time.time()
         response = requests.get(url, headers=self.headers, timeout=10)
         response.raise_for_status()
         return response.text

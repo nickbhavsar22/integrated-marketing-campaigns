@@ -16,6 +16,7 @@ from dotenv import load_dotenv
 
 ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".txt", ".md"}
 MAX_FILE_SIZE_MB = 10
+MIN_ACTION_INTERVAL_SECONDS = 30  # Cooldown between major LLM operations
 
 
 def sanitize_filename(name):
@@ -40,6 +41,18 @@ def safe_markdown(content, max_length=100000):
         st.warning(f"Content truncated (showing {max_length:,} of {len(content):,} characters)")
     else:
         st.markdown(content)
+
+
+def check_rate_limit(action_key: str) -> bool:
+    """Return True if the action is allowed (cooldown elapsed). Shows warning if throttled."""
+    now = time.time()
+    last = st.session_state.get(f"_rate_{action_key}", 0)
+    if now - last < MIN_ACTION_INTERVAL_SECONDS:
+        remaining = int(MIN_ACTION_INTERVAL_SECONDS - (now - last))
+        st.warning(f"Please wait {remaining}s before running this again.")
+        return False
+    st.session_state[f"_rate_{action_key}"] = now
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +392,10 @@ with st.sidebar:
             mime="application/json",
         )
 
+    # Version badge at bottom of sidebar
+    from core import __version__
+    st.divider()
+    st.caption(f"v{__version__}")
 
 
 # ---------------------------------------------------------------------------
@@ -404,6 +421,8 @@ with tab1:
     if st.button("Start Research Phase", key="start_research"):
         if not company_url:
             st.error("Please provide a Company URL.")
+        elif not check_rate_limit("research"):
+            pass
         else:
             with st.status("Running Research Phase...", expanded=True) as status:
                 try:
@@ -497,21 +516,43 @@ with tab1:
     if results.get("deep_research"):
         col_rerun1, col_rerun2, _ = st.columns([1, 1, 3])
         with col_rerun1:
-            if st.button("Re-run Research", key="rerun_research"):
-                with st.spinner("Re-analyzing..."):
-                    from core.graph import research_node
-
-                    result = research_node(results)
-                    st.session_state["workflow_results"].update(result)
+            confirm_key = "_confirm_rerun_research"
+            if st.session_state.get(confirm_key):
+                st.warning("This will overwrite current research results.")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Confirm", key="confirm_rerun_research_yes") and check_rate_limit("rerun_research"):
+                        st.session_state[confirm_key] = False
+                        with st.spinner("Re-analyzing..."):
+                            from core.graph import research_node
+                            result = research_node(results)
+                            st.session_state["workflow_results"].update(result)
+                            st.rerun()
+                with c2:
+                    if st.button("Cancel", key="confirm_rerun_research_no"):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
+            else:
+                if st.button("Re-run Research", key="rerun_research"):
+                    st.session_state[confirm_key] = True
                     st.rerun()
         with col_rerun2:
-            if st.button("Re-run Competitors", key="rerun_competitors"):
-                with st.spinner("Re-analyzing competitors..."):
-                    from core.graph import competitor_node
-
-                    result = competitor_node(results)
-                    st.session_state["workflow_results"].update(result)
-                    st.rerun()
+            confirm_key = "_confirm_rerun_competitors"
+            if st.session_state.get(confirm_key):
+                st.warning("This will overwrite competitor analysis.")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Confirm", key="confirm_rerun_comp_yes") and check_rate_limit("rerun_competitors"):
+                        st.session_state[confirm_key] = False
+                        with st.spinner("Re-analyzing competitors..."):
+                            from core.graph import competitor_node
+                            result = competitor_node(results)
+                            st.session_state["workflow_results"].update(result)
+                            st.rerun()
+                with c2:
+                    if st.button("Cancel", key="confirm_rerun_comp_no"):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
 
     # Display Results
     research_content = results.get("deep_research", "")
@@ -570,21 +611,43 @@ with tab2:
     if results.get("deep_research"):
         col_r1, col_r2, _ = st.columns([1, 1, 3])
         with col_r1:
-            if st.button("Re-run Segmentation", key="rerun_segmentation"):
-                with st.spinner("Re-analyzing segments..."):
-                    from core.graph import segment_node
-
-                    result = segment_node(results)
-                    st.session_state["workflow_results"].update(result)
+            confirm_key = "_confirm_rerun_segmentation"
+            if st.session_state.get(confirm_key):
+                st.warning("This will overwrite segmentation results.")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Confirm", key="confirm_rerun_seg_yes") and check_rate_limit("rerun_segmentation"):
+                        st.session_state[confirm_key] = False
+                        with st.spinner("Re-analyzing segments..."):
+                            from core.graph import segment_node
+                            result = segment_node(results)
+                            st.session_state["workflow_results"].update(result)
+                            st.rerun()
+                with c2:
+                    if st.button("Cancel", key="confirm_rerun_seg_no"):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
+            else:
+                if st.button("Re-run Segmentation", key="rerun_segmentation"):
+                    st.session_state[confirm_key] = True
                     st.rerun()
         with col_r2:
-            if st.button("Re-run Strategy", key="rerun_strategy"):
-                with st.spinner("Re-developing strategy..."):
-                    from core.graph import strategy_node
-
-                    result = strategy_node(results)
-                    st.session_state["workflow_results"].update(result)
-                    st.rerun()
+            confirm_key = "_confirm_rerun_strategy"
+            if st.session_state.get(confirm_key):
+                st.warning("This will overwrite strategy results.")
+                c1, c2 = st.columns(2)
+                with c1:
+                    if st.button("Confirm", key="confirm_rerun_strat_yes") and check_rate_limit("rerun_strategy"):
+                        st.session_state[confirm_key] = False
+                        with st.spinner("Re-developing strategy..."):
+                            from core.graph import strategy_node
+                            result = strategy_node(results)
+                            st.session_state["workflow_results"].update(result)
+                            st.rerun()
+                with c2:
+                    if st.button("Cancel", key="confirm_rerun_strat_no"):
+                        st.session_state[confirm_key] = False
+                        st.rerun()
 
     # Segments display
     if results.get("segments"):
@@ -643,12 +706,25 @@ with tab3:
 
     # Re-run button
     if results.get("strategy_framework"):
-        if st.button("Re-run Campaign Brief", key="rerun_brief"):
-            with st.spinner("Re-creating campaign brief..."):
-                from core.graph import campaign_node
-
-                result = campaign_node(results)
-                st.session_state["workflow_results"].update(result)
+        confirm_key = "_confirm_rerun_brief"
+        if st.session_state.get(confirm_key):
+            st.warning("This will overwrite the current campaign brief.")
+            c1, c2, _ = st.columns([1, 1, 3])
+            with c1:
+                if st.button("Confirm", key="confirm_rerun_brief_yes") and check_rate_limit("rerun_brief"):
+                    st.session_state[confirm_key] = False
+                    with st.spinner("Re-creating campaign brief..."):
+                        from core.graph import campaign_node
+                        result = campaign_node(results)
+                        st.session_state["workflow_results"].update(result)
+                        st.rerun()
+            with c2:
+                if st.button("Cancel", key="confirm_rerun_brief_no"):
+                    st.session_state[confirm_key] = False
+                    st.rerun()
+        else:
+            if st.button("Re-run Campaign Brief", key="rerun_brief"):
+                st.session_state[confirm_key] = True
                 st.rerun()
 
     if brief:
@@ -725,9 +801,16 @@ with tab4:
                 st.session_state["manifest_selections"] = {i: True for i in range(len(manifest))}
                 st.rerun()
         with col_none:
-            if st.button("Deselect All", key="deselect_all"):
-                st.session_state["manifest_selections"] = {i: False for i in range(len(manifest))}
-                st.rerun()
+            confirm_key = "_confirm_deselect_all"
+            if st.session_state.get(confirm_key):
+                if st.button("Confirm Deselect", key="confirm_deselect_yes"):
+                    st.session_state[confirm_key] = False
+                    st.session_state["manifest_selections"] = {i: False for i in range(len(manifest))}
+                    st.rerun()
+            else:
+                if st.button("Deselect All", key="deselect_all"):
+                    st.session_state[confirm_key] = True
+                    st.rerun()
         with col_count:
             selected_count = sum(1 for v in st.session_state["manifest_selections"].values() if v)
             st.write(f"**{selected_count} of {len(manifest)} selected**")
@@ -814,7 +897,7 @@ with tab4:
                     st.warning("Persona and JTBD are required.")
 
         # Generate button
-        if st.button("Generate Selected Assets", type="primary", key="generate_assets"):
+        if st.button("Generate Selected Assets", type="primary", key="generate_assets") and check_rate_limit("generate"):
             # Build approved list
             approved_data = []
             current_manifest = st.session_state["workflow_results"].get("content_manifest", [])
@@ -915,7 +998,23 @@ with tab4:
 
     # Regenerate JTBD
     if results.get("campaign_brief"):
-        if st.button("Regenerate Content Plan", key="regen_plan"):
+        confirm_key = "_confirm_regen_plan"
+        if st.session_state.get(confirm_key):
+            st.warning("This will overwrite the current content plan.")
+            c1, c2, _ = st.columns([1, 1, 3])
+            with c1:
+                do_regen = st.button("Confirm", key="confirm_regen_plan_yes")
+            with c2:
+                if st.button("Cancel", key="confirm_regen_plan_no"):
+                    st.session_state[confirm_key] = False
+                    st.rerun()
+        else:
+            do_regen = False
+            if st.button("Regenerate Content Plan", key="regen_plan"):
+                st.session_state[confirm_key] = True
+                st.rerun()
+        if st.session_state.get(confirm_key) and do_regen and check_rate_limit("regen_plan"):
+            st.session_state[confirm_key] = False
             with st.spinner("Re-planning content mix..."):
                 try:
                     from core.graph import jtbd_node
